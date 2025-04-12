@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Information System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hospital Information System</h1>
+            <p>Create and manage laboratory test requests</p>
+        </header>
+        
+        <main>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="create">Create Lab Request</button>
+                <button class="tab-btn" data-tab="results">View Lab Results</button>
+            </div>
+            
+            <div class="tab-content">
+                <div id="create-tab" class="tab-pane active">
+                    <h2>New Laboratory Test Request</h2>
+                    
+                    <form id="lab-request-form">
+                        <div class="form-group">
+                            <label for="patientName">Patient Name:</label>
+                            <input type="text" id="patientName" name="patientName" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="patientId">Patient ID (optional):</label>
+                            <input type="text" id="patientId" name="patientId">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="doctorName">Doctor Name:</label>
+                            <input type="text" id="doctorName" name="doctorName" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Laboratory Tests:</label>
+                            <div class="tests-list">
+                                <div class="test-item">
+                                    <input type="checkbox" id="cbc" name="tests" value="CBC">
+                                    <label for="cbc">Complete Blood Count (CBC)</label>
+                                </div>
+                                <div class="test-item">
+                                    <input type="checkbox" id="glucose" name="tests" value="GLUCOSE">
+                                    <label for="glucose">Blood Glucose</label>
+                                </div>
+                                <div class="test-item">
+                                    <input type="checkbox" id="lipid" name="tests" value="LIPID">
+                                    <label for="lipid">Lipid Panel</label>
+                                </div>
+                                <div class="test-item">
+                                    <input type="checkbox" id="liver" name="tests" value="LIVER">
+                                    <label for="liver">Liver Function Test</label>
+                                </div>
+                                <div class="test-item">
+                                    <input type="checkbox" id="kidney" name="tests" value="KIDNEY">
+                                    <label for="kidney">Kidney Function Test</label>
+                                </div>
+                                <div class="test-item">
+                                    <input type="checkbox" id="thyroid" name="tests" value="THYROID">
+                                    <label for="thyroid">Thyroid Function Test</label>
+                                </div>
+                                <div class="test-item">
+                                    <input type="checkbox" id="hba1c" name="tests" value="HBA1C">
+                                    <label for="hba1c">HbA1c</label>
+                                </div>
+                                <div class="test-item">
+                                    <input type="checkbox" id="urinalysis" name="tests" value="URINALYSIS">
+                                    <label for="urinalysis">Urinalysis</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit">Send Laboratory Request</button>
+                        </div>
+                        
+                        <div id="status-message" class="status-message"></div>
+                    </form>
+                </div>
+                
+                <div id="results-tab" class="tab-pane">
+                    <h2>Laboratory Test Results</h2>
+                    
+                    <div class="results-filter">
+                        <input type="text" id="search-results" placeholder="Search by patient name...">
+                        <button id="refresh-results">Refresh Results</button>
+                    </div>
+                    
+                    <div class="results-container">
+                        <div id="results-list" class="results-list">
+                            <p class="no-results">Loading lab results...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>© 2025 Hospital Information System | <a href="http://localhost:8080">Back to Home</a></p>
+        </footer>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>

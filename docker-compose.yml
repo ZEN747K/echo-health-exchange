@@ -1,0 +1,101 @@
+
+version: '3.8'
+
+services:
+  redirector-web:
+    build:
+      context: ./redirector
+    container_name: redirector-web
+    ports:
+      - "8080:80"
+    networks:
+      - hie-net
+
+  his-web:
+    build:
+      context: ./his
+    container_name: his-web
+    ports:
+      - "8081:80"
+    environment:
+      - MYSQL_HOST=mysql-his
+      - MYSQL_USER=his_user
+      - MYSQL_PASSWORD=his_password
+      - MYSQL_DATABASE=his_db
+      - FHIR_SERVER_URL=http://fhir-server:8080/fhir
+    depends_on:
+      - mysql-his
+      - fhir-server
+    networks:
+      - hie-net
+
+  lis-web:
+    build:
+      context: ./lis
+    container_name: lis-web
+    ports:
+      - "8082:80"
+    environment:
+      - MYSQL_HOST=mysql-lis
+      - MYSQL_USER=lis_user
+      - MYSQL_PASSWORD=lis_password
+      - MYSQL_DATABASE=lis_db
+      - FHIR_SERVER_URL=http://fhir-server:8080/fhir
+    depends_on:
+      - mysql-lis
+      - fhir-server
+    networks:
+      - hie-net
+
+  mysql-his:
+    image: mysql:8.0
+    container_name: mysql-his
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=his_db
+      - MYSQL_USER=his_user
+      - MYSQL_PASSWORD=his_password
+    volumes:
+      - mysql-his-data:/var/lib/mysql
+      - ./his/db-init:/docker-entrypoint-initdb.d
+    networks:
+      - hie-net
+
+  mysql-lis:
+    image: mysql:8.0
+    container_name: mysql-lis
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=lis_db
+      - MYSQL_USER=lis_user
+      - MYSQL_PASSWORD=lis_password
+    volumes:
+      - mysql-lis-data:/var/lib/mysql
+      - ./lis/db-init:/docker-entrypoint-initdb.d
+    networks:
+      - hie-net
+
+  fhir-server:
+    image: hapiproject/hapi:latest
+    container_name: fhir-server
+    ports:
+      - "8083:8080"
+    environment:
+      - hapi.fhir.default_encoding=JSON
+      - hapi.fhir.allow_multiple_delete=true
+      - hapi.fhir.allow_external_references=true
+      - hapi.fhir.allow_placeholder_references=true
+      - hapi.fhir.reuse_cached_search_results_millis=60000
+    volumes:
+      - hapi-data:/data/hapi
+    networks:
+      - hie-net
+
+networks:
+  hie-net:
+    driver: bridge
+
+volumes:
+  mysql-his-data:
+  mysql-lis-data:
+  hapi-data:

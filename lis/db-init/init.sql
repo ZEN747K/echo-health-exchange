@@ -1,0 +1,12 @@
+
+CREATE TABLE IF NOT EXISTS lab_results (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    request_id VARCHAR(100) NOT NULL,
+    patient_name VARCHAR(255) NOT NULL,
+    test_results JSON NOT NULL,
+    conclusion TEXT,
+    status VARCHAR(50) NOT NULL,
+    fhir_id VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

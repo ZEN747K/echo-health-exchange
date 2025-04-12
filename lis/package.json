@@ -1,0 +1,16 @@
+
+{
+  "name": "lis-web",
+  "version": "1.0.0",
+  "description": "Laboratory Information System for Health Information Exchange",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2": "^3.6.1",
+    "axios": "^1.5.0",
+    "body-parser": "^1.20.2"
+  }
+}

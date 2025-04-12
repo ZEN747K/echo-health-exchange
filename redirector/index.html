@@ -1,0 +1,41 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Information Exchange - Welcome</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Health Information Exchange</h1>
+            <p>Select your role to continue</p>
+        </header>
+        
+        <main>
+            <div class="role-selection">
+                <div class="role-card" id="doctor-card">
+                    <div class="role-icon doctor-icon">👨‍⚕️</div>
+                    <h2>Doctor</h2>
+                    <p>Access the Hospital Information System</p>
+                    <button onclick="redirectToHIS()">Enter HIS</button>
+                </div>
+                
+                <div class="role-card" id="lab-card">
+                    <div class="role-icon lab-icon">🧪</div>
+                    <h2>Lab Staff</h2>
+                    <p>Access the Laboratory Information System</p>
+                    <button onclick="redirectToLIS()">Enter LIS</button>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>© 2025 Health Information Exchange System</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
