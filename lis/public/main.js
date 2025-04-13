@@ -211,7 +211,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     requestId,
                     patientName,
                     testResults,
-                    conclusion
+                    conclusion,
+                    status: 'final' // Set status to final when submitting
                 })
             });
             

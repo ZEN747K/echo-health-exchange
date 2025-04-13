@@ -78,7 +78,7 @@ app.get('/api/lab-requests', async (req, res) => {
 
 // Submit lab results
 app.post('/api/lab-results', async (req, res) => {
-    const { requestId, patientName, testResults, conclusion } = req.body;
+    const { requestId, patientName, testResults, conclusion, status } = req.body;
     
     if (!requestId || !patientName || !testResults || testResults.length === 0) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -88,8 +88,8 @@ app.post('/api/lab-results', async (req, res) => {
         // Log the result to the LIS database
         const connection = await pool.getConnection();
         const [result] = await connection.execute(
-            'INSERT INTO lab_results (request_id, patient_name, test_results, conclusion, status) VALUES (?, ?, ?, ?, ?)',
-            [requestId, patientName, JSON.stringify(testResults), conclusion, 'FINAL']
+            'INSERT INTO lab_results (request_id, result_data, conclusion, status) VALUES (?, ?, ?, ?)',
+            [requestId, JSON.stringify(testResults), conclusion, status || 'FINAL']
         );
         connection.release();
         
