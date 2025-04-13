@@ -201,6 +201,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         try {
+            showStatus('Submitting results...', 'info');
+            
             // Submit to server
             const response = await fetch('/api/lab-results', {
                 method: 'POST',
@@ -216,11 +218,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
             
-            const data = await response.json();
-            
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to submit lab results');
+                const errorText = await response.text();
+                console.error('Server error response:', errorText);
+                throw new Error(`Server returned ${response.status}: ${errorText}`);
             }
+            
+            const data = await response.json();
             
             // Show success message
             showStatus('Lab results submitted successfully!', 'success');
@@ -234,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
         } catch (error) {
             console.error('Error submitting lab results:', error);
-            showStatus('Error submitting lab results. Please try again.', 'error');
+            showStatus(`Error submitting lab results: ${error.message}`, 'error');
         }
     });
     

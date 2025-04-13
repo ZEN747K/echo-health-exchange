@@ -85,11 +85,13 @@ app.post('/api/lab-results', async (req, res) => {
     }
     
     try {
+        console.log("Received lab result submission:", { requestId, status, testResults });
+        
         // Log the result to the LIS database
         const connection = await pool.getConnection();
         const [result] = await connection.execute(
-            'INSERT INTO lab_results (request_id, result_data, conclusion, status) VALUES (?, ?, ?, ?)',
-            [requestId, JSON.stringify(testResults), conclusion, status || 'FINAL']
+            'INSERT INTO lab_results (request_id, patient_name, result_data, conclusion, status) VALUES (?, ?, ?, ?, ?)',
+            [requestId, patientName, JSON.stringify(testResults), conclusion, status || 'FINAL']
         );
         connection.release();
         
@@ -128,10 +130,12 @@ app.post('/api/lab-results', async (req, res) => {
         });
         
         // Update the lab result with FHIR ID
-        await connection.execute(
+        const updateConn = await pool.getConnection();
+        await updateConn.execute(
             'UPDATE lab_results SET fhir_id = ? WHERE id = ?',
             [fhirResponse.data.id, resultId]
         );
+        updateConn.release();
         
         // Update the ServiceRequest status to completed
         try {
@@ -153,6 +157,8 @@ app.post('/api/lab-results', async (req, res) => {
                     'Content-Type': 'application/fhir+json'
                 }
             });
+            
+            console.log("ServiceRequest status updated to completed");
         } catch (updateError) {
             console.error('Error updating ServiceRequest status:', updateError);
             // Continue with response, as we already have the DiagnosticReport created
