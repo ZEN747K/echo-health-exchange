@@ -1,4 +1,3 @@
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
@@ -85,7 +84,7 @@ app.post('/api/lab-results', async (req, res) => {
     }
     
     try {
-        console.log("Received lab result submission:", { requestId, status, testResults });
+        console.log("Received lab result submission:", { requestId, patientName, status, testResults });
         
         // Log the result to the LIS database
         const connection = await pool.getConnection();
