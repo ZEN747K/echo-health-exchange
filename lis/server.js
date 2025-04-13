@@ -35,7 +35,7 @@ app.get('/', (req, res) => {
 // Get pending lab requests
 app.get('/api/lab-requests', async (req, res) => {
     try {
-        // Query FHIR server for pending ServiceRequest resources
+        // Query FHIR server for ServiceRequest resources
         const fhirResponse = await axios.get(`${FHIR_SERVER_URL}/ServiceRequest`, {
             headers: {
                 'Accept': 'application/fhir+json'
@@ -52,6 +52,9 @@ app.get('/api/lab-requests', async (req, res) => {
                 name: coding.display
             })) || [];
             
+            // Extract patient details from extensions
+            const extensions = request.extension || [];
+            
             return {
                 id: request.id,
                 patientName: request.subject?.display || 'Unknown',
@@ -60,7 +63,8 @@ app.get('/api/lab-requests', async (req, res) => {
                 tests,
                 status: request.status,
                 priority: request.priority || 'routine',
-                created: request.authoredOn
+                created: request.authoredOn,
+                extensions: extensions
             };
         });
         
@@ -128,6 +132,31 @@ app.post('/api/lab-results', async (req, res) => {
             'UPDATE lab_results SET fhir_id = ? WHERE id = ?',
             [fhirResponse.data.id, resultId]
         );
+        
+        // Update the ServiceRequest status to completed
+        try {
+            // First GET the current ServiceRequest
+            const getRequestResponse = await axios.get(`${FHIR_SERVER_URL}/ServiceRequest/${requestId}`, {
+                headers: {
+                    'Accept': 'application/fhir+json'
+                }
+            });
+            
+            const serviceRequest = getRequestResponse.data;
+            
+            // Update status to completed
+            serviceRequest.status = 'completed';
+            
+            // PUT updated ServiceRequest back to FHIR server
+            await axios.put(`${FHIR_SERVER_URL}/ServiceRequest/${requestId}`, serviceRequest, {
+                headers: {
+                    'Content-Type': 'application/fhir+json'
+                }
+            });
+        } catch (updateError) {
+            console.error('Error updating ServiceRequest status:', updateError);
+            // Continue with response, as we already have the DiagnosticReport created
+        }
         
         res.status(201).json({
             message: 'Lab result submitted successfully',

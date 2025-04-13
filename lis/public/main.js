@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Fetch lab requests from FHIR server
     async function fetchLabRequests() {
-        requestsList.innerHTML = '<tr><td colspan="5" class="no-data">Loading laboratory requests...</td></tr>';
+        requestsList.innerHTML = '<tr><td colspan="6" class="no-data">Loading laboratory requests...</td></tr>';
         
         try {
             const response = await fetch('/api/lab-requests');
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentRequests = data.labRequests || [];
             
             if (currentRequests.length === 0) {
-                requestsList.innerHTML = '<tr><td colspan="5" class="no-data">No pending laboratory requests found.</td></tr>';
+                requestsList.innerHTML = '<tr><td colspan="6" class="no-data">No pending laboratory requests found.</td></tr>';
                 return;
             }
             
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
         } catch (error) {
             console.error('Error fetching lab requests:', error);
-            requestsList.innerHTML = '<tr><td colspan="5" class="no-data">Error loading laboratory requests. Please try again.</td></tr>';
+            requestsList.innerHTML = '<tr><td colspan="6" class="no-data">Error loading laboratory requests. Please try again.</td></tr>';
         }
     }
     
@@ -39,9 +39,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const statusClass = request.status === 'active' ? 'status-active' : 'status-completed';
             const testsText = request.tests.map(test => test.name).join(', ');
             
+            // Extract patient details from extensions
+            let patientAge = '';
+            let patientGender = '';
+            let patientWeight = '';
+            
+            if (request.extensions) {
+                const ageExt = request.extensions.find(ext => ext.url === 'http://his.org/fhir/extension/patient-age');
+                const genderExt = request.extensions.find(ext => ext.url === 'http://his.org/fhir/extension/patient-gender');
+                const weightExt = request.extensions.find(ext => ext.url === 'http://his.org/fhir/extension/patient-weight');
+                
+                patientAge = ageExt ? ageExt.valueInteger : '';
+                patientGender = genderExt ? genderExt.valueString : '';
+                patientWeight = weightExt ? weightExt.valueDecimal : '';
+            }
+            
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${request.patientName}<br><small>ID: ${request.patientId}</small></td>
+                <td>${request.patientName}<br>
+                    <small>ID: ${request.patientId}</small>
+                    ${patientAge ? `<br><small>Age: ${patientAge}</small>` : ''}
+                    ${patientGender ? `<br><small>Gender: ${patientGender}</small>` : ''}
+                    ${patientWeight ? `<br><small>Weight: ${patientWeight} kg</small>` : ''}
+                </td>
                 <td>${request.doctorName}</td>
                 <td>
                     <ul class="test-list">
@@ -50,17 +70,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 </td>
                 <td><span class="status-pill ${statusClass}">${request.status}</span></td>
                 <td>
-                    <button class="btn-action" data-request-id="${request.id}">Enter Results</button>
+                    ${request.status === 'active' ? 
+                        `<button class="btn-action" data-request-id="${request.id}">Enter Results</button>` :
+                        `<button class="btn-action disabled" disabled>Completed</button>`
+                    }
                 </td>
             `;
             
             requestsList.appendChild(row);
             
-            // Add event listener to the button
-            const actionBtn = row.querySelector('.btn-action');
-            actionBtn.addEventListener('click', () => {
-                openResultForm(request);
-            });
+            // Add event listener to the button if status is active
+            if (request.status === 'active') {
+                const actionBtn = row.querySelector('.btn-action');
+                actionBtn.addEventListener('click', () => {
+                    openResultForm(request);
+                });
+            }
         });
     }
     
@@ -68,6 +93,34 @@ document.addEventListener('DOMContentLoaded', () => {
         // Set hidden input value
         document.getElementById('request-id').value = request.id;
         document.getElementById('patient-name').value = request.patientName;
+        
+        // Extract patient details from extensions
+        let patientAge = '';
+        let patientGender = '';
+        let patientWeight = '';
+        
+        if (request.extensions) {
+            const ageExt = request.extensions.find(ext => ext.url === 'http://his.org/fhir/extension/patient-age');
+            const genderExt = request.extensions.find(ext => ext.url === 'http://his.org/fhir/extension/patient-gender');
+            const weightExt = request.extensions.find(ext => ext.url === 'http://his.org/fhir/extension/patient-weight');
+            
+            patientAge = ageExt ? ageExt.valueInteger : '';
+            patientGender = genderExt ? genderExt.valueString : '';
+            patientWeight = weightExt ? weightExt.valueDecimal : '';
+        }
+        
+        // Display patient details
+        const patientDetailsEl = document.getElementById('patient-details');
+        patientDetailsEl.innerHTML = '';
+        
+        if (patientAge || patientGender || patientWeight) {
+            const detailsHtml = [];
+            if (patientAge) detailsHtml.push(`Age: ${patientAge}`);
+            if (patientGender) detailsHtml.push(`Gender: ${patientGender}`);
+            if (patientWeight) detailsHtml.push(`Weight: ${patientWeight} kg`);
+            
+            patientDetailsEl.innerHTML = detailsHtml.join(' | ');
+        }
         
         // Generate test result inputs
         const testResultsContainer = document.getElementById('test-results-container');
