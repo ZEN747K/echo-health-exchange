@@ -34,7 +34,7 @@ app.get('/', (req, res) => {
 
 // Create a new lab request
 app.post('/api/lab-requests', async (req, res) => {
-    const { patientName, patientId, doctorName, testList } = req.body;
+    const { patientName, patientId, patientAge, patientGender, patientWeight, doctorName, testList } = req.body;
     
     if (!patientName || !doctorName || !testList || testList.length === 0) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -44,8 +44,17 @@ app.post('/api/lab-requests', async (req, res) => {
         // Log the request to the HIS database
         const connection = await pool.getConnection();
         const [result] = await connection.execute(
-            'INSERT INTO lab_requests (patient_name, patient_id, doctor_name, test_list, status) VALUES (?, ?, ?, ?, ?)',
-            [patientName, patientId || 'Unknown', doctorName, JSON.stringify(testList), 'PENDING']
+            'INSERT INTO lab_requests (patient_name, patient_id, patient_age, patient_gender, patient_weight, doctor_name, test_list, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                patientName, 
+                patientId || 'Unknown', 
+                patientAge || null, 
+                patientGender || null, 
+                patientWeight || null, 
+                doctorName, 
+                JSON.stringify(testList), 
+                'PENDING'
+            ]
         );
         connection.release();
         
@@ -78,6 +87,32 @@ app.post('/api/lab-requests', async (req, res) => {
                 value: `HIS-LR-${requestId}`
             }]
         };
+        
+        // Add additional patient details if provided
+        if (patientAge || patientGender || patientWeight) {
+            serviceRequest.extension = [];
+            
+            if (patientAge) {
+                serviceRequest.extension.push({
+                    url: "http://his.org/fhir/extension/patient-age",
+                    valueInteger: parseInt(patientAge)
+                });
+            }
+            
+            if (patientGender) {
+                serviceRequest.extension.push({
+                    url: "http://his.org/fhir/extension/patient-gender",
+                    valueString: patientGender
+                });
+            }
+            
+            if (patientWeight) {
+                serviceRequest.extension.push({
+                    url: "http://his.org/fhir/extension/patient-weight",
+                    valueDecimal: parseFloat(patientWeight)
+                });
+            }
+        }
         
         // Send ServiceRequest to FHIR server
         const fhirResponse = await axios.post(`${FHIR_SERVER_URL}/ServiceRequest`, serviceRequest, {

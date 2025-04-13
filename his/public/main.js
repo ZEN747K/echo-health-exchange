@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Get form values
         const patientName = document.getElementById('patientName').value;
         const patientId = document.getElementById('patientId').value;
+        const patientAge = document.getElementById('patientAge').value;
+        const patientGender = document.getElementById('patientGender').value;
+        const patientWeight = document.getElementById('patientWeight').value;
         const doctorName = document.getElementById('doctorName').value;
         
         // Get selected tests
@@ -54,6 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     patientName,
                     patientId,
+                    patientAge,
+                    patientGender,
+                    patientWeight,
                     doctorName,
                     testList: selectedTests
                 })

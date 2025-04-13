@@ -1,4 +1,3 @@
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
@@ -35,7 +34,7 @@ app.get('/', (req, res) => {
 // Get pending lab requests
 app.get('/api/lab-requests', async (req, res) => {
     try {
-        // Query FHIR server for pending ServiceRequest resources
+        // Query FHIR server for ServiceRequest resources
         const fhirResponse = await axios.get(`${FHIR_SERVER_URL}/ServiceRequest`, {
             headers: {
                 'Accept': 'application/fhir+json'
@@ -52,6 +51,9 @@ app.get('/api/lab-requests', async (req, res) => {
                 name: coding.display
             })) || [];
             
+            // Extract patient details from extensions
+            const extensions = request.extension || [];
+            
             return {
                 id: request.id,
                 patientName: request.subject?.display || 'Unknown',
@@ -60,7 +62,8 @@ app.get('/api/lab-requests', async (req, res) => {
                 tests,
                 status: request.status,
                 priority: request.priority || 'routine',
-                created: request.authoredOn
+                created: request.authoredOn,
+                extensions: extensions
             };
         });
         
@@ -74,18 +77,20 @@ app.get('/api/lab-requests', async (req, res) => {
 
 // Submit lab results
 app.post('/api/lab-results', async (req, res) => {
-    const { requestId, patientName, testResults, conclusion } = req.body;
+    const { requestId, patientName, testResults, conclusion, status } = req.body;
     
     if (!requestId || !patientName || !testResults || testResults.length === 0) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
     
     try {
+        console.log("Received lab result submission:", { requestId, patientName, status, testResults });
+        
         // Log the result to the LIS database
         const connection = await pool.getConnection();
         const [result] = await connection.execute(
-            'INSERT INTO lab_results (request_id, patient_name, test_results, conclusion, status) VALUES (?, ?, ?, ?, ?)',
-            [requestId, patientName, JSON.stringify(testResults), conclusion, 'FINAL']
+            'INSERT INTO lab_results (request_id, patient_name, result_data, conclusion, status) VALUES (?, ?, ?, ?, ?)',
+            [requestId, patientName, JSON.stringify(testResults), conclusion, status || 'FINAL']
         );
         connection.release();
         
@@ -124,10 +129,39 @@ app.post('/api/lab-results', async (req, res) => {
         });
         
         // Update the lab result with FHIR ID
-        await connection.execute(
+        const updateConn = await pool.getConnection();
+        await updateConn.execute(
             'UPDATE lab_results SET fhir_id = ? WHERE id = ?',
             [fhirResponse.data.id, resultId]
         );
+        updateConn.release();
+        
+        // Update the ServiceRequest status to completed
+        try {
+            // First GET the current ServiceRequest
+            const getRequestResponse = await axios.get(`${FHIR_SERVER_URL}/ServiceRequest/${requestId}`, {
+                headers: {
+                    'Accept': 'application/fhir+json'
+                }
+            });
+            
+            const serviceRequest = getRequestResponse.data;
+            
+            // Update status to completed
+            serviceRequest.status = 'completed';
+            
+            // PUT updated ServiceRequest back to FHIR server
+            await axios.put(`${FHIR_SERVER_URL}/ServiceRequest/${requestId}`, serviceRequest, {
+                headers: {
+                    'Content-Type': 'application/fhir+json'
+                }
+            });
+            
+            console.log("ServiceRequest status updated to completed");
+        } catch (updateError) {
+            console.error('Error updating ServiceRequest status:', updateError);
+            // Continue with response, as we already have the DiagnosticReport created
+        }
         
         res.status(201).json({
             message: 'Lab result submitted successfully',
