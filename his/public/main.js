@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         try {
-            // Send to server
+            // Send to server.js
             const response = await fetch('/api/lab-requests', {
                 method: 'POST',
                 headers: {
