@@ -6,8 +6,8 @@ const Index = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Auto redirect to the redirector at localhost:8080
-    window.location.href = "http://localhost:8080";
+    // Redirect to our React homepage instead of the static redirector
+    navigate('/');
   }, [navigate]);
 
   return (
