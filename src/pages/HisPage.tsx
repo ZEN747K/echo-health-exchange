@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 interface LabResult {
   id: string;
@@ -365,7 +366,7 @@ const HisPage = () => {
       </Tabs>
 
       <footer className="mt-8 text-center text-sm text-gray-600">
-        <p>© 2025 Hospital Information System | <a href="http://localhost:8080" className="text-blue-600 hover:underline">Back to Home</a></p>
+        <p>© 2025 Hospital Information System | <Link to="/" className="text-blue-600 hover:underline">Back to Home</Link></p>
       </footer>
     </div>
   );

@@ -4,14 +4,15 @@ const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
 const axios = require('axios');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
-const PORT = 80;
+const PORT = process.env.PORT || 80;
 
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(cors());
 
 // Database connection pool
 const pool = mysql.createPool({
@@ -27,11 +28,7 @@ const pool = mysql.createPool({
 // FHIR Server URL
 const FHIR_SERVER_URL = process.env.FHIR_SERVER_URL || 'http://localhost:8083/fhir';
 
-// Routes
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
+// API Routes
 // Create a new lab request
 app.post('/api/lab-requests', async (req, res) => {
     const { patientName, patientId, patientAge, patientGender, patientWeight, doctorName, testList } = req.body;
@@ -168,6 +165,11 @@ app.get('/api/lab-results', async (req, res) => {
         console.error('Error fetching lab results:', error);
         res.status(500).json({ error: 'Failed to fetch lab results' });
     }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'healthy' });
 });
 
 // Start the server
