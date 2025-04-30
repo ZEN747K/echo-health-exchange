@@ -2,14 +2,17 @@
 version: '3.8'
 
 services:
-  redirector-web:
+  react-web:
     build:
-      context: ./redirector
-    container_name: redirector-web
+      context: .
+    container_name: react-web
     ports:
       - "8080:80"
     networks:
       - hie-net
+    depends_on:
+      - his-web
+      - lis-web
 
   his-web:
     build:
