@@ -18,8 +18,9 @@ services:
     build:
       context: ./his
     container_name: his-web
-    ports:
-      - "8081:80"
+    # Remove the public port mapping to avoid conflict
+    expose:
+      - "80"
     environment:
       - MYSQL_HOST=mysql-his
       - MYSQL_USER=his_user
@@ -36,8 +37,9 @@ services:
     build:
       context: ./lis
     container_name: lis-web
-    ports:
-      - "8082:80"
+    # Remove the public port mapping to avoid conflict
+    expose:
+      - "80"
     environment:
       - MYSQL_HOST=mysql-lis
       - MYSQL_USER=lis_user
