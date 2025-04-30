@@ -22,10 +22,6 @@ CREATE TABLE IF NOT EXISTS lab_results (
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (request_id) REFERENCES lab_requests(id)
+    FOREIGN KEY (request_id) REFERENCES lab_requests(id) ON DELETE SET NULL, -- Added ON DELETE behavior
+    INDEX idx_request_id (request_id) -- Added index for foreign key
 );
-
-INSERT INTO lab_requests (patient_name, patient_id, doctor_name, test_list, status)
-VALUES 
-('John Smith', 'PT10001', 'Dr. Maria Chen', '[{"code":"CBC", "name":"Complete Blood Count"}, {"code":"GLUCOSE", "name":"Blood Glucose"}]', 'PENDING'),
-('Sarah Johnson', 'PT10002', 'Dr. James Wilson', '[{"code":"LIPID", "name":"Lipid Panel"}, {"code":"LIVER", "name":"Liver Function Test"}]', 'PENDING');
