@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS lab_results (
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (request_id) REFERENCES lab_requests(id) ON DELETE SET NULL, -- Added ON DELETE behavior
-    INDEX idx_request_id (request_id) -- Added index for foreign key
+    FOREIGN KEY (request_id) REFERENCES lab_requests(id)
 );
+
+

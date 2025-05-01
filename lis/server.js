@@ -28,6 +28,7 @@ const FHIR_SERVER_URL = process.env.FHIR_SERVER_URL || 'http://localhost:8083/fh
 
 // Routes
 app.get('/', (req, res) => {
+    console.log('GET / - Serving index.html');
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -35,6 +36,7 @@ app.get('/', (req, res) => {
 app.get('/api/lab-requests', async (req, res) => {
     try {
         // Query FHIR server for ServiceRequest resources
+        console.log('GET /api/lab-requests - Fetching lab requests from FHIR server');
         const fhirResponse = await axios.get(`${FHIR_SERVER_URL}/ServiceRequest`, {
             headers: {
                 'Accept': 'application/fhir+json'
@@ -66,6 +68,7 @@ app.get('/api/lab-requests', async (req, res) => {
                 extensions: extensions
             };
         });
+        console.log('GET /api/lab-requests - Fetched lab requests:', {labRequests});
         
         res.json({ labRequests });
         
@@ -79,6 +82,7 @@ app.get('/api/lab-requests', async (req, res) => {
 app.post('/api/lab-results', async (req, res) => {
     const { requestId, patientName, testResults, conclusion, status } = req.body;
     
+    console.log('POST /api/lab-results - Submitting lab results, Request body:', req.body);
     if (!requestId || !patientName || !testResults || testResults.length === 0) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -176,6 +180,7 @@ app.post('/api/lab-results', async (req, res) => {
 });
 
 // Start the server
+
 app.listen(PORT, () => {
     console.log(`LIS server running on port ${PORT}`);
 });
