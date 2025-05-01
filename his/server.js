@@ -27,13 +27,44 @@ const pool = mysql.createPool({
 // FHIR Server URL
 const FHIR_SERVER_URL = process.env.FHIR_SERVER_URL || 'http://localhost:8083/fhir';
 
+// Function to generate patient ID
+function generatePatientId(patientName, testList, doctorName, day, month, year) {   
+    if (!patientName || !testList || !doctorName || !day || !month || !year) {
+         return 'Unknown';
+     }
+     const patientPart = patientName.substring(0, 3).toUpperCase();
+     const testCount = testList.length.toString();
+     const doctorPart = doctorName.substring(0, 3).toUpperCase();
+     const dayStr = day.toString().padStart(2, '0');
+    const monthStr = month.toString().padStart(2, '0');
+    const yearStr = year.toString();
+
+    return `${patientPart}${testCount}${doctorPart}${dayStr}${monthStr}${yearStr}`;
+}
+
+
 // Routes
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    console.log('GET /: Request received', { query: req.query });
 });
 
 // Create a new lab request
 app.post('/api/lab-requests', async (req, res) => {
+    console.log('POST /api/lab-requests: Request received', { body: req.body });
+
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.getMonth() + 1; // Month is 0-indexed
+    const year = today.getFullYear();
+
+    // Generate patient ID if not provided
+    if (!req.body.patientId) {
+        req.body.patientId = generatePatientId(req.body.patientName, req.body.testList, req.body.doctorName, day, month, year);
+        console.log('New generated patientId:', req.body.patientId);
+    } else {
+        console.log('patientId was provided:', req.body.patientId);
+    }
     const { patientName, patientId, patientAge, patientGender, patientWeight, doctorName, testList } = req.body;
     
     if (!patientName || !doctorName || !testList || testList.length === 0) {
@@ -41,6 +72,7 @@ app.post('/api/lab-requests', async (req, res) => {
     }
     
     try {
+
         // Log the request to the HIS database
         const connection = await pool.getConnection();
         const [result] = await connection.execute(
@@ -140,6 +172,7 @@ app.post('/api/lab-requests', async (req, res) => {
 });
 
 // Get lab results
+
 app.get('/api/lab-results', async (req, res) => {
     try {
         // Query FHIR server for DiagnosticReport resources
@@ -149,6 +182,8 @@ app.get('/api/lab-results', async (req, res) => {
             }
         });
         
+        console.log('GET /api/lab-results: FHIR Response', { body: fhirResponse.data });
+
         const diagnosticReports = fhirResponse.data.entry || [];
         const labResults = diagnosticReports.map(entry => {
             const report = entry.resource;
@@ -169,6 +204,7 @@ app.get('/api/lab-results', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch lab results' });
     }
 });
+
 
 // Start the server
 app.listen(PORT, () => {
