@@ -28,14 +28,15 @@ const pool = mysql.createPool({
 const FHIR_SERVER_URL = process.env.FHIR_SERVER_URL || 'http://localhost:8083/fhir';
 
 // Routes
+// Route for serving the main HTML file
 app.get('/', (req, res) => {
+    console.log('app.get(/) - Function called with arguments:', req.params, req.body);
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    console.log('GET /: Request received', { query: req.query });
 });
 
 // Create a new lab request
 app.post('/api/lab-requests', async (req, res) => {
-    console.log('POST /api/lab-requests: Request received', { body: req.body });
+    console.log('app.post(/api/lab-requests) - Function called with arguments:', req.params, req.body);
 
     const { patientName, patientId, patientAge, patientGender, patientWeight, doctorName, testList } = req.body;
     
@@ -129,6 +130,7 @@ app.post('/api/lab-requests', async (req, res) => {
             'UPDATE lab_requests SET fhir_id = ? WHERE id = ?',
             [fhirResponse.data.id, requestId]
         );
+        console.log('Lab request updated: status=PENDING, fhir_id=', fhirResponse.data.id);
         
         res.status(201).json({
             message: 'Lab request created successfully',
@@ -143,8 +145,8 @@ app.post('/api/lab-requests', async (req, res) => {
 });
 
 // Get lab results
-
 app.get('/api/lab-results', async (req, res) => {
+    
     try {
         // Query FHIR server for DiagnosticReport resources
         const fhirResponse = await axios.get(`${FHIR_SERVER_URL}/DiagnosticReport`, {
@@ -153,8 +155,6 @@ app.get('/api/lab-results', async (req, res) => {
             }
         });
         
-        console.log('GET /api/lab-results: FHIR Response', fhirResponse.data);
-
         const diagnosticReports = fhirResponse.data.entry || [];
         const labResults = diagnosticReports.map(entry => {
             const report = entry.resource;
@@ -169,13 +169,14 @@ app.get('/api/lab-results', async (req, res) => {
         });
         
         res.json({ labResults });
+        console.log('app.get(/api/lab-results) - Function called with arguments:', req.params, req.body);
+
         
     } catch (error) {
         console.error('Error fetching lab results:', error);
         res.status(500).json({ error: 'Failed to fetch lab results' });
     }
 });
-
 
 // Start the server
 app.listen(PORT, () => {
