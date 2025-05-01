@@ -68,7 +68,7 @@ app.get('/api/lab-requests', async (req, res) => {
                 extensions: extensions
             };
         });
-        
+        console.log('Pending Lab Requests JSON:\n', JSON.stringify(labRequests, null, 2));
         res.json({ labRequests });
         
     } catch (error) {

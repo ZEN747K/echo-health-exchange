@@ -30,7 +30,7 @@ const FHIR_SERVER_URL = process.env.FHIR_SERVER_URL || 'http://localhost:8083/fh
 // Routes
 // Route for serving the main HTML file
 app.get('/', (req, res) => {
-    console.log('app.get(/) - Function called with arguments:', req.params, req.body);
+    
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -146,7 +146,6 @@ app.post('/api/lab-requests', async (req, res) => {
 
 // Get lab results
 app.get('/api/lab-results', async (req, res) => {
-    
     try {
         // Query FHIR server for DiagnosticReport resources
         const fhirResponse = await axios.get(`${FHIR_SERVER_URL}/DiagnosticReport`, {
@@ -154,7 +153,7 @@ app.get('/api/lab-results', async (req, res) => {
                 'Accept': 'application/fhir+json'
             }
         });
-        
+
         const diagnosticReports = fhirResponse.data.entry || [];
         const labResults = diagnosticReports.map(entry => {
             const report = entry.resource;
@@ -167,16 +166,18 @@ app.get('/api/lab-results', async (req, res) => {
                 results: report.result?.map(r => r.display) || []
             };
         });
+
+        // Log results with timestamp
+        console.log(`[${new Date().toISOString()}] app.get(/api/lab-results) - Retrieved lab results:`);
+        console.log(JSON.stringify(labResults, null, 2)); // formatted JSON
         
         res.json({ labResults });
-        console.log('app.get(/api/lab-results) - Function called with arguments:', req.params, req.body);
-
-        
     } catch (error) {
         console.error('Error fetching lab results:', error);
         res.status(500).json({ error: 'Failed to fetch lab results' });
     }
 });
+
 
 // Start the server
 app.listen(PORT, () => {
