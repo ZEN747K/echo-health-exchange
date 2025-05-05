@@ -1,4 +1,3 @@
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
@@ -30,7 +29,6 @@ const FHIR_SERVER_URL = process.env.FHIR_SERVER_URL || 'http://localhost:8083/fh
 // Routes
 // Route for serving the main HTML file
 app.get('/', (req, res) => {
-    
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -38,10 +36,24 @@ app.get('/', (req, res) => {
 app.post('/api/lab-requests', async (req, res) => {
     console.log('app.post(/api/lab-requests) - Function called with arguments:', req.params, req.body);
 
-    const { patientName, patientId, patientAge, patientGender, patientWeight, doctorName, testList } = req.body;
+    let { patientName, patientId, patientAge, patientGender, patientWeight, doctorName, testList } = req.body;
     
+    // Check if required fields are provided
     if (!patientName || !doctorName || !testList || testList.length === 0) {
         return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Also check if patientAge is provided when patientId is not provided
+    if ((!patientId || patientId.trim() === '') && !patientAge) {
+        return res.status(400).json({ error: 'Patient age is required when patient ID is not provided' });
+    }
+    
+    // Modify the request data - Generate default patient ID if not provided
+    if (!patientId || patientId.trim() === '') {
+        patientId = `${patientName}-${patientAge}`;
+        console.log(`Generated default patient ID: ${patientId}`);
+        // Update the request body with the new patientId
+        req.body.patientId = patientId;
     }
     
     try {
@@ -51,7 +63,7 @@ app.post('/api/lab-requests', async (req, res) => {
             'INSERT INTO lab_requests (patient_name, patient_id, patient_age, patient_gender, patient_weight, doctor_name, test_list, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 patientName, 
-                patientId || 'Unknown', 
+                patientId, 
                 patientAge || null, 
                 patientGender || null, 
                 patientWeight || null, 
@@ -72,7 +84,7 @@ app.post('/api/lab-requests', async (req, res) => {
             subject: {
                 display: patientName,
                 identifier: {
-                    value: patientId || 'Unknown'
+                    value: patientId
                 }
             },
             requester: {
@@ -135,7 +147,8 @@ app.post('/api/lab-requests', async (req, res) => {
         res.status(201).json({
             message: 'Lab request created successfully',
             requestId,
-            fhirId: fhirResponse.data.id
+            fhirId: fhirResponse.data.id,
+            patientId: patientId // Return the generated or provided patientId
         });
         
     } catch (error) {
@@ -177,7 +190,6 @@ app.get('/api/lab-results', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch lab results' });
     }
 });
-
 
 // Start the server
 app.listen(PORT, () => {
