@@ -157,37 +157,164 @@ app.post('/api/lab-requests', async (req, res) => {
     }
 });
 
-// Get lab results
-app.get('/api/lab-results', async (req, res) => {
+// Get lab dashboard items (pending requests and results)
+app.get('/api/lab-dashboard', async (req, res) => {
+    console.log(`[${new Date().toISOString()}] app.get('/api/lab-dashboard') - Fetching lab dashboard items.`);
     try {
-        // Query FHIR server for DiagnosticReport resources
-        const fhirResponse = await axios.get(`${FHIR_SERVER_URL}/DiagnosticReport`, {
-            headers: {
-                'Accept': 'application/fhir+json'
+        const connection = await pool.getConnection();
+        // Fetch all lab requests initiated by this HIS, ordered by creation date
+        const [hisRequests] = await connection.execute(
+            'SELECT id, patient_name, patient_id, patient_age, patient_gender, patient_weight, test_list, doctor_name, status AS local_status, fhir_id, created_at FROM lab_requests ORDER BY created_at DESC'
+        );
+        // connection.release(); // Release connection later after all FHIR calls if needed, or per request if preferred.
+
+        const dashboardItems = [];
+
+        for (const request of hisRequests) {
+            let testListParsed = [];
+            try {
+                if (typeof request.test_list === 'string') {
+                    testListParsed = JSON.parse(request.test_list || '[]');
+                } else if (typeof request.test_list === 'object' && request.test_list !== null) {
+                    // If it's already an object (and not null), use it directly
+                    testListParsed = Array.isArray(request.test_list) ? request.test_list : [];
+                }
+            } catch (parseError) {
+                console.error(`[${new Date().toISOString()}] Error parsing test_list for HIS request ID ${request.id}:`, request.test_list, parseError);
+                // Default to an empty array or handle as an error display item
             }
-        });
+            const testsDisplay = testListParsed.map(t => t.name).join(', ') || 'No tests specified';
 
-        const diagnosticReports = fhirResponse.data.entry || [];
-        const labResults = diagnosticReports.map(entry => {
-            const report = entry.resource;
-            return {
-                id: report.id,
-                patientName: report.subject?.display || 'Unknown',
-                status: report.status,
-                conclusion: report.conclusion,
-                effectiveDate: report.effectiveDateTime,
-                results: report.result?.map(r => r.display) || []
-            };
-        });
+            if (!request.fhir_id) {
+                // Case: Request was logged locally but might have failed to send to FHIR or fhir_id was not saved.
+                dashboardItems.push({
+                    type: 'pending_local_error',
+                    his_request_id: request.id,
+                    patientName: request.patient_name,
+                    patientId: request.patient_id,
+                    doctorName: request.doctor_name,
+                    tests: testsDisplay,
+                    requestedAt: request.created_at,
+                    statusMessage: 'Pending (FHIR ID missing)',
+                    details: 'This request may not have been successfully sent to the lab system.'
+                });
+                continue;
+            }
 
-        // Log results with timestamp
-        console.log(`[${new Date().toISOString()}] app.get(/api/lab-results) - Retrieved lab results:`);
-        console.log(JSON.stringify(labResults, null, 2)); // formatted JSON
-        
-        res.json({ labResults });
+            try {
+                // 1. Always try to find DiagnosticReport(s) first.
+                // Sort by date descending (if supported by FHIR server, often default) to get latest first.
+                // FHIR standard sort parameter is _sort=-date (for DiagnosticReport, 'date' often refers to effectiveDateTime or issued)
+                const drSearchUrl = `${FHIR_SERVER_URL}/DiagnosticReport?based-on=ServiceRequest/${request.fhir_id}&_sort=-date`;
+                let diagnosticReportResponse;
+                try {
+                    diagnosticReportResponse = await axios.get(drSearchUrl, {
+                        headers: { 'Accept': 'application/fhir+json' }
+                    });
+                } catch (drError) {
+                    // If searching for DiagnosticReport fails (e.g., 404 if none exist, or other server error),
+                    // we'll proceed to check ServiceRequest status. Log the error for diagnostics.
+                    console.warn(`[${new Date().toISOString()}] Warning: Could not fetch DiagnosticReport for ServiceRequest/${request.fhir_id}. Error: ${drError.message}. Will check ServiceRequest status.`);
+                    diagnosticReportResponse = { data: null }; // Ensure structure for checks below
+                }
+
+                let finalReport = null;
+                let preliminaryReport = null;
+                let otherRelevantReport = null; // For statuses like 'partial', 'registered'
+
+                if (diagnosticReportResponse.data && diagnosticReportResponse.data.entry && diagnosticReportResponse.data.entry.length > 0) {
+                    for (const entry of diagnosticReportResponse.data.entry) {
+                        const report = entry.resource;
+                        if (report.resourceType === 'DiagnosticReport') {
+                            if (['final', 'amended', 'corrected'].includes(report.status)) {
+                                finalReport = report;
+                                break; // Found the most definitive, stop.
+                            } else if (['preliminary'].includes(report.status) && !preliminaryReport) {
+                                preliminaryReport = report;
+                            } else if (['partial', 'registered'].includes(report.status) && !otherRelevantReport) {
+                                otherRelevantReport = report;
+                            }
+                        }
+                    }
+                }
+
+                const chosenReport = finalReport || preliminaryReport || otherRelevantReport;
+
+                if (chosenReport) {
+                    // A report (final, preliminary, or other) was found.
+                    dashboardItems.push({
+                        type: 'result',
+                        his_request_id: request.id,
+                        fhir_diagnostic_report_id: chosenReport.id,
+                        patientName: chosenReport.subject?.display || request.patient_name,
+                        patientId: request.patient_id,
+                        statusMessage: `Result: ${chosenReport.status}`, // Frontend uses this to set "Complete" or "Pending"
+                        conclusion: chosenReport.conclusion,
+                        effectiveDate: chosenReport.effectiveDateTime || chosenReport.issued, // Use issued if effectiveDateTime is not present
+                        resultsDisplay: chosenReport.result?.map(r => r.display).join('; ') || 'No detailed results provided.',
+                        doctorName: request.doctor_name,
+                        testsOrdered: testsDisplay,
+                        requestedAt: request.created_at
+                    });
+                } else {
+                    // 2. If NO relevant DiagnosticReport was found, then check ServiceRequest status.
+                    const srResponse = await axios.get(`${FHIR_SERVER_URL}/ServiceRequest/${request.fhir_id}`, {
+                        headers: { 'Accept': 'application/fhir+json' }
+                    });
+                    const serviceRequest = srResponse.data;
+                    const srFinalStates = ['completed', 'cancelled', 'entered-in-error', 'revoked'];
+
+                    if (srFinalStates.includes(serviceRequest.status)) {
+                        // ServiceRequest is final, but no DiagnosticReport found
+                        dashboardItems.push({
+                            type: 'completed_no_report',
+                            his_request_id: request.id,
+                            fhir_service_request_id: request.fhir_id,
+                            patientName: request.patient_name,
+                            patientId: request.patient_id,
+                            doctorName: request.doctor_name,
+                            tests: testsDisplay,
+                            requestedAt: request.created_at,
+                            statusMessage: `Request ${serviceRequest.status}`, // e.g., "Request completed"
+                            details: `The lab request is ${serviceRequest.status}, but no specific diagnostic report was found.`
+                        });
+                    } else {
+                        // ServiceRequest is not in a final state (e.g., 'active', 'on-hold') and no report found
+                        dashboardItems.push({
+                            type: 'pending_on_fhir',
+                            his_request_id: request.id,
+                            fhir_service_request_id: request.fhir_id,
+                            patientName: request.patient_name,
+                            patientId: request.patient_id,
+                            doctorName: request.doctor_name,
+                            tests: testsDisplay,
+                            requestedAt: request.created_at,
+                            statusMessage: `Pending (Lab Status: ${serviceRequest.status})`
+                        });
+                    }
+                }
+            } catch (fhirError) {
+                console.error(`[${new Date().toISOString()}] FHIR error for HIS request ID ${request.id} (FHIR ID ${request.fhir_id}): ${fhirError.message}`);
+                dashboardItems.push({
+                    type: 'pending_fhir_comms_error',
+                    his_request_id: request.id,
+                    patientName: request.patient_name,
+                    patientId: request.patient_id,
+                    doctorName: request.doctor_name,
+                    tests: testsDisplay,
+                    requestedAt: request.created_at,
+                    statusMessage: 'Pending (FHIR Communication Issue)',
+                    details: `Could not retrieve or process status from FHIR server for ServiceRequest/${request.fhir_id}. Error: ${fhirError.message}`
+                });
+            }
+        }
+        connection.release(); // Release connection after all operations are done
+        console.log(`[${new Date().toISOString()}] app.get('/api/lab-dashboard') - Returning ${dashboardItems.length} items.`);
+        res.json({ labDashboardItems: dashboardItems });
+
     } catch (error) {
-        console.error('Error fetching lab results:', error);
-        res.status(500).json({ error: 'Failed to fetch lab results' });
+        console.error(`[${new Date().toISOString()}] Error fetching lab dashboard items:`, error);
+        res.status(500).json({ error: 'Failed to fetch lab dashboard items' });
     }
 });
 

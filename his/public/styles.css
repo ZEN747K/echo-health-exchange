@@ -239,6 +239,111 @@ footer {
     border-top: 1px solid #ddd;
     color: #777;
 }
+/* General styling for each dashboard item card */
+.dashboard-item-card {
+    /* border: 1px solid #ccc; */ /* Remove or comment out default border if overridden by status borders */
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-width: 2px; /* Define a common border width */
+    border-style: solid; /* Define a common border style */
+    border-color: #ccc; /* Default border color if no specific status class applies */
+}
+
+/* Specific border colors based on item type/status */
+.dashboard-item-card.result-item { /* This class now consistently means "Complete" for border purposes */
+    border-color: #28a745; /* Green border for Complete/Final */
+}
+
+.dashboard-item-card.pending-item {
+    border-color: #ffc107; /* Yellow/Amber border for Pending */
+}
+
+.dashboard-item-card.error-item {
+    border-color: #dc3545; /* Red border for errors */
+}
+
+.dashboard-item-card.warning-item {
+    border-color: #fd7e14; /* Darker orange/amber for warnings like 'completed_no_report' */
+}
+
+.dashboard-item-card.unknown-item {
+    border-color: #6c757d; /* Grey border for unknown */
+}
+
+/* Styling for the primary status message paragraph */
+.status-message {
+    padding-top: 5px;
+    padding-bottom: 8px;
+    margin-top: 8px;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    border-top: 1px dashed #eee;
+}
+
+/* Text colors for the "Status: Label" part based on its class */
+.status-message.success strong { 
+    color: #28a745;/* Styling for the primary status message paragraph */
+    .status-message {
+        padding-top: 8px; /* Increased padding for better separation */
+        padding-bottom: 10px; /* Increased padding */
+        margin-top: 10px; /* Increased margin */
+        margin-bottom: 12px; /* Increased margin */
+        font-size: 1.3em;   /* << เพิ่มขนาดตัวอักษรที่นี่ */
+        font-weight: 600; /* << ทำให้ตัวอักษรหนาขึ้น (optional) */
+        border-top: 1px solid #e0e0e0; /* Lighter separator line */
+    }
+    
+    /* Text colors for the "Status: Label" part based on its class */
+    /* (คงสไตล์เดิมไว้ หรือปรับสีตามความเหมาะสม) */
+    .status-message.success strong { 
+        color: #28a745;
+    }
+    .status-message.pending strong { 
+        color: #ffc107;
+    }
+    .status-message.error strong { 
+        color: #dc3545;
+    }
+    .status-message.warning strong { 
+        color: #fd7e14;
+    }
+    .status-message.unknown strong { 
+        color: #6c757d;
+    }
+    
+    
+    
+}
+
+
+/* Optional: Adjust heading and paragraph margins within the card */
+.dashboard-item-card h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.dashboard-item-card p {
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+.dashboard-item-card small {
+    color: #555;
+    font-size: 0.9em;
+}
+.dashboard-item-card small em {
+    color: #444;
+}
+
+/* Styling for test details if present */
+.dashboard-item-card div strong {
+    display: block;
+    margin-bottom: 5px;
+}
 
 footer a {
     color: #0077cc;
