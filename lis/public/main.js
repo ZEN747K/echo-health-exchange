@@ -152,11 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <option value="Critical low">Critical low</option>
                         </select>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="test-${index}-note">Notes:</label>
-                    <textarea id="test-${index}-note" name="test-${index}-note" rows="2"></textarea>
-                </div>
+                
             `;
             
             testResultsContainer.appendChild(testDiv);
@@ -188,15 +184,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const value = input.value;
             const unit = document.getElementById(`test-${index}-unit`).value;
             const interpretation = document.getElementById(`test-${index}-interpretation`).value;
-            const note = document.getElementById(`test-${index}-note`).value;
+           
             
             testResults.push({
                 code: testCode,
                 name: testName,
                 value,
                 unit,
-                interpretation,
-                note
+                interpretation
+                
             });
         });
         
